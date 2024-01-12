@@ -40,6 +40,32 @@ def video_to_frames(video_file):
     print(len(base64Frame),"frames read.")
     return base64Frame,video_filename,video_duration
 
+def download_audio(url):
+    try:
+        # 发送 GET 请求下载音频文件
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+
+        # 创建一个临时目录
+        temp_dir = tempfile.mkdtemp()
+
+        # 提取文件名
+        filename = url.split("/")[-1]
+
+        # 拼接保存路径
+        file_path = f"{temp_dir}/{filename}"
+
+        # 将文件保存到临时目录
+        with open(file_path, "wb") as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                file.write(chunk)
+
+        return file_path
+
+    except Exception as e:
+        print(f"下载音频文件失败: {e}")
+        return None
+
 ##2.Generate stories based on frames with gpt4v
 def frames_to_story(base64Frames,prompt,api_key):
     PROMPT_MESSAGES=[
@@ -131,12 +157,21 @@ def main():
 
     option = st.selectbox(
     '选择你想要的音效',
-    ('女声', '男声'))
+    ('女声', '男声', '明哥', '光哥', '普通话'))
     classify = '';
     if option == '男声':
         classify = 'echo';
     elif option == '女声':
         classify = 'nova';
+    elif option == '明哥':
+        classify = 'ming';
+        st.write("试听链接：https://res.xrunda.com/paper-tts/1705027124nTvciZ.mp3")
+    elif option == '光哥':
+        classify = 'guang';
+        st.write("试听链接：https://res.xrunda.com/paper-tts/1705027189XDdwWl.mp3")
+    elif option == '普通话':
+        classify = 'custom';
+        st.write("试听链接：https://res.xrunda.com/paper-tts/1705027238xJ48m5.mp3")
     # elif option == 'xxx':
     #     classify = 'onyx';
     if uploaded_file is not None:
@@ -170,30 +205,118 @@ def main():
             st.write(text)
             if text is not None:
                 st.write('(生成文案如果不正确或不满意，您可以重新点击生成)')
-                result = SpeechSynthesizer.call(model='sambert-dengxm01-ft-202401022343-e243',
-                                text=text,
-                                sample_rate=48000,
-                                format='mp3')
+                if classify == 'ming':
+                    response=requests.post(
+                        "https://podcast-ai.xrunda.com/api/com_tts",
+                        headers={
+                            "Content-Type": "application/x-www-form-urlencoded;charset=utf-8", # 指定请求体为JSON格式
+                        },
+                        data={
+                            "text":text,
+                            "voice":"DS-Ming"
+                        },
+                    )
+                    st.write('已为您生成音频与字幕，请点击链接查看')
+                    voice = response.json()
+                    st.write('音频：' + voice['data'][0])
+                    st.write('字幕：' + voice['data'][1])
+                    # 获取下载好的音频和视频文件
+                    # filePath = download_audio('https://res.xrunda.com/paper-tts/1704958137gBj9fl.mp3')
+                    filePath = download_audio(voice['data'][0])
+                    output_video_filename=os.path.splitext(video_filename)[0]+"_output.mp4"
+                    final_video_filename=merge_audio_video(video_filename,filePath,output_video_filename)
+                    #display the result
+                    st.video(final_video_filename)
+                    
+                    #clean up the temporary files
+                    os.unlink(video_filename)
+                    os.unlink(filePath)
+                    os.unlink(final_video_filename)
+                elif classify == 'guang':
+                    response=requests.post(
+                        "https://podcast-ai.xrunda.com/api/com_tts",
+                        headers={
+                            "Content-Type": "application/x-www-form-urlencoded;charset=utf-8", # 指定请求体为JSON格式
+                        },
+                        data={
+                            "text":text,
+                            "voice":"DS-Guang"
+                        },
+                    )
+                    st.write('已为您生成音频与字幕，请点击链接查看')
+                    voice = response.json()
+                    st.write('音频：' + voice['data'][0])
+                    st.write('字幕：' + voice['data'][1])
+                    # 获取下载好的音频和视频文件
+                    filePath = download_audio(voice['data'][0])
+                    output_video_filename=os.path.splitext(video_filename)[0]+"_output.mp4"
+                    final_video_filename=merge_audio_video(video_filename,filePath,output_video_filename)
+                    #display the result
+                    st.video(final_video_filename)
+                    
+                    #clean up the temporary files
+                    os.unlink(video_filename)
+                    os.unlink(filePath)
+                    os.unlink(final_video_filename)
+                elif classify == 'custom':
+                    response=requests.post(
+                        "https://podcast-ai.xrunda.com/api/com_tts",
+                        headers={
+                            "Content-Type": "application/x-www-form-urlencoded;charset=utf-8", # 指定请求体为JSON格式
+                        },
+                        data={
+                            "text":text,
+                            "voice":"zh-CN-YunyangNeural",
+                            "rate":"5",
+                            "volume":"5",
+                        },
+                    )
+                    st.write('已为您生成音频与字幕，请点击链接查看')
+                    voice = response.json()
+                    st.write('音频：' + voice['data'][0])
+                    st.write('字幕：' + voice['data'][1])
+                    # 获取下载好的音频和视频文件
+                    filePath = download_audio(voice['data'][0])
+                    output_video_filename=os.path.splitext(video_filename)[0]+"_output.mp4"
+                    final_video_filename=merge_audio_video(video_filename,filePath,output_video_filename)
+                    #display the result
+                    st.video(final_video_filename)
+                    
+                    #clean up the temporary files
+                    os.unlink(video_filename)
+                    os.unlink(filePath)
+                    os.unlink(final_video_filename)
+                else:
+                    # response=requests.post(
+                    #     "https://podcast-ai.xrunda.com/api/com_tts",
+                    #     headers={
+                    #         "Content-Type": "application/x-www-form-urlencoded;charset=utf-8", # 指定请求体为JSON格式
+                    #     },
+                    #     data={
+                    #         "text":text,
+                    #         "voice":"zh-CN-YunyangNeural",
+                    #         "rate":"5",
+                    #         "volume":"5",
+                    #     },
+                    # )
+                    # st.write('已为您生成音频与字幕，请点击链接查看')
+                    # voice = response.json()
+                    # st.write('音频：' + voice['data'][0])
+                    # st.write('字幕：' + voice['data'][1])
+                    #Generate audio from text
+                    audio_filename,audio_bytes_io=text_to_audio(text,openai_key,classify)
+                    #merge audio and video
+                    output_video_filename=os.path.splitext(video_filename)[0]+"_output.mp4"
 
-                if result.get_audio_data() is not None:
-                    with open('output02.mp3', 'wb') as f:
-                        f.write(result.get_audio_data())
-                    print(result)
-                print('  get response: %s' % (result.get_response()))
-                # #Generate audio from text
-                # audio_filename,audio_bytes_io=text_to_audio(text,openai_key,classify)
-                # #merge audio and video
-                # output_video_filename=os.path.splitext(video_filename)[0]+"_output.mp4"
-                
-                # final_video_filename=merge_audio_video(video_filename,audio_filename,output_video_filename)
-                
+                    final_video_filename=merge_audio_video(video_filename,audio_filename,output_video_filename)
+                    
 
-                # #display the result
-                # st.video(final_video_filename)
-                
-                # #clean up the temporary files
-                # os.unlink(video_filename)
-                # os.unlink(audio_filename)
-                # os.unlink(final_video_filename)
+                    #display the result
+                    st.video(final_video_filename)
+                    
+                    #clean up the temporary files
+                    os.unlink(video_filename)
+                    os.unlink(audio_filename)
+                    os.unlink(final_video_filename)
 if __name__=="__main__":
     main()
