@@ -157,12 +157,13 @@ def main():
 
     option = st.selectbox(
     '选择你想要的音效',
-    ('女声', '男声', '明哥', '光哥', '普通话'))
+    ('东北女声', '男声', '明哥', '光哥', '普通话'))
     classify = '';
     if option == '男声':
         classify = 'echo';
-    elif option == '女声':
-        classify = 'nova';
+    elif option == '东北女声':
+        classify = 'dongbeinv';
+        st.write("试听链接：https://res.xrunda.com/paper-tts/1705027721wncoHt.mp3")
     elif option == '明哥':
         classify = 'ming';
         st.write("试听链接：https://res.xrunda.com/paper-tts/1705027124nTvciZ.mp3")
@@ -267,6 +268,34 @@ def main():
                         data={
                             "text":text,
                             "voice":"zh-CN-YunyangNeural",
+                            "rate":"5",
+                            "volume":"5",
+                        },
+                    )
+                    st.write('已为您生成音频与字幕，请点击链接查看')
+                    voice = response.json()
+                    st.write('音频：' + voice['data'][0])
+                    st.write('字幕：' + voice['data'][1])
+                    # 获取下载好的音频和视频文件
+                    filePath = download_audio(voice['data'][0])
+                    output_video_filename=os.path.splitext(video_filename)[0]+"_output.mp4"
+                    final_video_filename=merge_audio_video(video_filename,filePath,output_video_filename)
+                    #display the result
+                    st.video(final_video_filename)
+                    
+                    #clean up the temporary files
+                    os.unlink(video_filename)
+                    os.unlink(filePath)
+                    os.unlink(final_video_filename)
+                elif classify == 'dongbeinv':
+                    response=requests.post(
+                        "https://podcast-ai.xrunda.com/api/com_tts",
+                        headers={
+                            "Content-Type": "application/x-www-form-urlencoded;charset=utf-8", # 指定请求体为JSON格式
+                        },
+                        data={
+                            "text":'今天天气怎么样，这里是一润一达为您播报今天的天气，北京今天晴，最高气温四摄氏度，最低气温零下六摄氏度',
+                            "voice":"zh-CN-liaoning-XiaobeiNeural",
                             "rate":"5",
                             "volume":"5",
                         },
